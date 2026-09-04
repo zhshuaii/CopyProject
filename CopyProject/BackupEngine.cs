@@ -34,18 +34,16 @@ namespace CopyProject
             string sourceMcp = Path.GetFullPath(mcpPath);
             string sourceDir = Path.GetDirectoryName(sourceMcp);
             string projectName = Path.GetFileNameWithoutExtension(sourceMcp);
-            string sourceFolderName = new DirectoryInfo(sourceDir).Name;
             string outputRoot = Path.GetFullPath(targetRoot);
 
             EnsureTargetIsSafe(sourceDir, outputRoot);
             EnsureSqlIsReachable();
-
             Directory.CreateDirectory(outputRoot);
 
             string finalZipPath = GetUniqueOutputPath(outputRoot, projectName);
             string partialZipPath = finalZipPath + ".partial";
             string workDir = Path.Combine(outputRoot, ".CopyProject_" + Guid.NewGuid().ToString("N"));
-            string projectWorkDir = Path.Combine(workDir, sourceFolderName);
+            string projectWorkDir = Path.Combine(workDir, projectName);
             string sqlWorkDir = Path.Combine(workDir, "Sql");
 
             try
@@ -72,12 +70,15 @@ namespace CopyProject
                 Report(progress, 90, "Runtime 数据库复制完成");
 
                 Report(progress, 95, "正在打包 ZIP...");
-                if (File.Exists(partialZipPath))
-                    File.Delete(partialZipPath);
-
+                TryDeleteFile(partialZipPath);
                 ZipFile.CreateFromDirectory(projectWorkDir, partialZipPath, CompressionLevel.Fastest, true);
-                File.Move(partialZipPath, finalZipPath);
 
+                // 正式 ZIP 出现之前必须先把工作区清理干净。
+                Report(progress, 98, "正在清理临时文件...");
+                DeleteDirectoryWithRetry(workDir);
+                workDir = null;
+
+                File.Move(partialZipPath, finalZipPath);
                 Report(progress, 100, "备份完成");
                 return finalZipPath;
             }
@@ -176,15 +177,12 @@ namespace CopyProject
             string token = Guid.NewGuid().ToString("N");
             string backupPath = Path.Combine(sqlWorkDir, baseName + "_" + token + ".bak");
             string temporaryDatabase = "CopyProject_TEMP_" + token;
-            bool temporaryDatabaseAttached = false;
 
             try
             {
                 BackupDatabase(databaseName, backupPath);
                 RestoreDatabase(temporaryDatabase, baseName, backupPath, destinationDir);
-                temporaryDatabaseAttached = true;
                 DetachDatabase(temporaryDatabase);
-                temporaryDatabaseAttached = false;
 
                 string restoredMdf = Path.Combine(destinationDir, baseName + ".mdf");
                 string restoredLdf = Path.Combine(destinationDir, baseName + ".ldf");
@@ -193,9 +191,8 @@ namespace CopyProject
             }
             finally
             {
-                if (temporaryDatabaseAttached)
-                    TryDropTemporaryDatabase(temporaryDatabase);
-
+                // DETACH 成功后 DB_ID 已不存在；如果 RESTORE/DETACH 中途失败则尝试删除临时库。
+                TryDropTemporaryDatabase(temporaryDatabase);
                 TryDeleteFile(backupPath);
             }
         }
@@ -354,7 +351,7 @@ namespace CopyProject
             }
             catch
             {
-                // 清理失败不能覆盖原始备份异常。
+                // 不覆盖主异常；外层工作目录清理仍会再次暴露文件占用问题。
             }
         }
 
@@ -369,9 +366,7 @@ namespace CopyProject
             }
 
             foreach (string directory in Directory.GetDirectories(sourceDir))
-            {
                 count += CountNormalFiles(directory);
-            }
 
             return count;
         }
@@ -440,7 +435,8 @@ namespace CopyProject
                 }
 
                 TryDeleteFile(destinationPath);
-                Thread.Sleep(delays[attempt]);
+                if (attempt < delays.Length - 1)
+                    Thread.Sleep(delays[attempt]);
             }
 
             throw new IOException("复制文件失败：" + sourcePath, lastError);
@@ -488,7 +484,7 @@ namespace CopyProject
             }
             catch
             {
-                // 读取失败时使用 SQL Server 命名实例的默认虚拟服务账户。
+                // 读取失败时使用 WINCC 命名实例常见的虚拟服务账户。
             }
 
             return @"NT SERVICE\" + SqlServiceName;
@@ -557,6 +553,35 @@ namespace CopyProject
             }
         }
 
+        private static void DeleteDirectoryWithRetry(string path)
+        {
+            int[] delays = { 200, 500, 1000 };
+            Exception lastError = null;
+
+            for (int attempt = 0; attempt < delays.Length; attempt++)
+            {
+                try
+                {
+                    if (Directory.Exists(path))
+                        Directory.Delete(path, true);
+                    return;
+                }
+                catch (IOException ex)
+                {
+                    lastError = ex;
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    lastError = ex;
+                }
+
+                if (attempt < delays.Length - 1)
+                    Thread.Sleep(delays[attempt]);
+            }
+
+            throw new IOException("备份内容已生成，但临时工作目录无法清理：" + path, lastError);
+        }
+
         private static void TryDeleteFile(string path)
         {
             try
@@ -566,7 +591,6 @@ namespace CopyProject
             }
             catch
             {
-                // 最终清理由调用者决定是否提示，不覆盖主异常。
             }
         }
 
@@ -579,7 +603,6 @@ namespace CopyProject
             }
             catch
             {
-                // 正常流程尽量保持零残留；清理失败不覆盖主异常。
             }
         }
 
