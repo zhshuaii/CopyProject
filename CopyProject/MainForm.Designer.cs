@@ -1,16 +1,9 @@
-﻿namespace CopyProject
+namespace CopyProject
 {
     partial class MainForm
     {
-        /// <summary>
-        /// 必需的设计器变量。
-        /// </summary>
         private System.ComponentModel.IContainer components = null;
 
-        /// <summary>
-        /// 清理所有正在使用的资源。
-        /// </summary>
-        /// <param name="disposing">如果应释放托管资源，为 true；否则为 false。</param>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -20,12 +13,8 @@
             base.Dispose(disposing);
         }
 
-        #region Windows 窗体设计器生成的代码
+        #region Windows Form Designer generated code
 
-        /// <summary>
-        /// 设计器支持所需的方法 - 不要修改
-        /// 使用代码编辑器修改此方法的内容。
-        /// </summary>
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
@@ -66,7 +55,7 @@
             this.BtnCopyProject.Name = "BtnCopyProject";
             this.BtnCopyProject.Size = new System.Drawing.Size(100, 25);
             this.BtnCopyProject.TabIndex = 9;
-            this.BtnCopyProject.Text = "复制项目";
+            this.BtnCopyProject.Text = "备份项目";
             this.BtnCopyProject.UseVisualStyleBackColor = true;
             this.BtnCopyProject.Click += new System.EventHandler(this.BtnCopyProject_Click);
             // 
@@ -78,7 +67,7 @@
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(142, 15);
             this.label1.TabIndex = 10;
-            this.label1.Text = "选择要复制的源项目";
+            this.label1.Text = "选择要备份的源项目";
             // 
             // txtVersion
             // 
@@ -87,7 +76,7 @@
             this.txtVersion.Name = "txtVersion";
             this.txtVersion.Size = new System.Drawing.Size(134, 15);
             this.txtVersion.TabIndex = 11;
-            this.txtVersion.Text = "Version：1.0.0.0";
+            this.txtVersion.Text = "Version：2.0.0.0";
             // 
             // txtAuthor
             // 
@@ -105,7 +94,7 @@
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(400, 50);
             this.label2.TabIndex = 13;
-            this.label2.Text = "Copy Project 可以尝试复制正在运行中的WinCC项目\r\n但不包括历史归档报警等！";
+            this.label2.Text = "WinCC Runtime 无需停止即可备份项目\r\n不包含历史归档数据，源项目目录保持只读";
             this.label2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // progressBar1
@@ -146,7 +135,6 @@
             this.Text = "Copy Project";
             this.ResumeLayout(false);
             this.PerformLayout();
-
         }
 
         #endregion
@@ -162,4 +150,3 @@
         private System.Windows.Forms.Label labelProgress;
     }
 }
-
