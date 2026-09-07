@@ -120,6 +120,10 @@ internal static class SqlIntegration
         string mdf = Path.Combine(directory, baseName + ".mdf");
         string ldf = Path.Combine(directory, baseName + ".ldf");
         Execute(connection, "CREATE DATABASE " + Q(name) + " ON PRIMARY (NAME=N'" + name + "D',FILENAME=N'" + L(mdf) + "',SIZE=8MB) LOG ON (NAME=N'" + name + "L',FILENAME=N'" + L(ldf) + "',SIZE=8MB);");
+        Console.WriteLine("Fixture " + baseName + " AUTO_CLOSE before=" + Scalar(connection, "SELECT is_auto_close_on FROM sys.databases WHERE name=N'" + name + "';"));
+        // Only this disposable fixture is changed; emulate a continuously running Runtime database.
+        Execute(connection, "ALTER DATABASE " + Q(name) + " SET AUTO_CLOSE OFF;");
+        Console.WriteLine("Fixture " + baseName + " state=" + Scalar(connection, "SELECT state_desc FROM sys.databases WHERE name=N'" + name + "';"));
     }
     private static void Execute(SqlConnection connection, string sql) { using (var command = new SqlCommand(sql, connection)) { command.CommandTimeout = 60; command.ExecuteNonQuery(); } }
     private static object Scalar(SqlConnection connection, string sql) { using (var command = new SqlCommand(sql, connection)) { command.CommandTimeout = 30; return command.ExecuteScalar(); } }
