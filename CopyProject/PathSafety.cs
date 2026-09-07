@@ -13,8 +13,12 @@ namespace CopyProject
         // A deliberately bounded legacy-Windows path policy, not a general link resolver.
         public static string FullPath(string path)
         {
-            if (string.IsNullOrWhiteSpace(path) || !Path.IsPathRooted(path)) throw new IOException("必须使用本地绝对路径。");
-            string full = Path.GetFullPath(path);
+            if (string.IsNullOrWhiteSpace(path) || path.Length < 3 || !char.IsLetter(path[0]) || path[1] != ':' || (path[2] != '\\' && path[2] != '/')) throw new IOException("必须使用带盘符的本地绝对路径。");
+            if (path.IndexOf(':', 2) >= 0) throw new IOException("不支持备用数据流路径：" + path);
+            string full;
+            try { full = Path.GetFullPath(path); }
+            catch (ArgumentException ex) { throw new IOException("无效本地路径：" + path, ex); }
+            catch (NotSupportedException ex) { throw new IOException("不支持的本地路径：" + path, ex); }
             if (full.StartsWith(@"\\", StringComparison.Ordinal) || full.Length > 240) throw new IOException("不支持 UNC、设备路径或超过 240 字符的路径：" + full);
             if (full.IndexOf(':', 2) >= 0) throw new IOException("不支持备用数据流路径：" + full);
             return full.Length > 3 ? full.TrimEnd(Path.DirectorySeparatorChar) : full;
