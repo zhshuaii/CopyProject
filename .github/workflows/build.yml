@@ -1,0 +1,93 @@
+name: Build and verify CopyProject
+
+on:
+  push:
+    branches: [master, 'fix/**']
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: microsoft/setup-msbuild@v2
+      - name: Build Debug and Release with warnings as errors
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force TestResults | Out-Null
+          foreach ($configuration in @('Debug', 'Release')) {
+            msbuild CopyProject.sln /m /t:Rebuild "/p:Configuration=$configuration" '/p:Platform=Any CPU' /v:minimal "/bl:TestResults/build-$configuration.binlog" /fl "/flp:logfile=TestResults/build-$configuration.log;verbosity=normal"
+            if ($LASTEXITCODE -ne 0) { throw "$configuration build failed" }
+          }
+      - name: Run C# regression tests in Debug and Release
+        shell: pwsh
+        run: |
+          foreach ($configuration in @('Debug', 'Release')) {
+            & ".\CopyProject.Tests\bin\$configuration\CopyProject.Tests.exe" | Tee-Object "TestResults/unit-$configuration.txt"
+            if ($LASTEXITCODE -ne 0) { throw "$configuration regression tests failed" }
+          }
+      - name: Run real SQL round-trip on disposable LocalDB
+        shell: pwsh
+        run: |
+          $sql = (Get-Command SqlLocalDB.exe -ErrorAction SilentlyContinue).Source
+          if (!$sql) {
+            $sql = (Get-ChildItem "$env:ProgramFiles\Microsoft SQL Server\*\Tools\Binn\SqlLocalDB.exe" | Sort-Object FullName -Descending | Select-Object -First 1).FullName
+          }
+          if (!$sql) { throw 'SQL LocalDB is required; this test must not be silently skipped' }
+          $instance = "CopyProjectCI$env:GITHUB_RUN_ID"
+          & $sql create $instance -s
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot create isolated LocalDB instance' }
+          try {
+            $env:COPYPROJECT_TEST_INSTANCE = "(localdb)\$instance"
+            & .\CopyProject.Tests\bin\Release\CopyProject.Tests.exe --integration | Tee-Object TestResults/sql-integration.txt
+            if ($LASTEXITCODE -ne 0) { throw 'SQL integration tests failed' }
+          }
+          finally {
+            & $sql stop $instance -k
+            & $sql delete $instance
+          }
+      - name: Package validation build
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item CopyProject/bin/Release/CopyProject.exe, CopyProject/bin/Release/CopyProject.exe.config, README.md dist/
+          Copy-Item docs/VALIDATION.md dist/
+          @("Commit: $env:GITHUB_SHA", "Branch: $env:GITHUB_REF_NAME", 'Target: .NET Framework 4.6.2', 'Configuration: Release / Any CPU', 'WinCC field restore: NOT VERIFIED', "BuiltUtc: $([DateTime]::UtcNow.ToString('O'))") | Set-Content -Encoding UTF8 dist/BUILD.txt
+          Get-ChildItem dist -File | Get-FileHash -Algorithm SHA256 | ForEach-Object { "$($_.Hash)  $(Split-Path $_.Path -Leaf)" } | Set-Content -Encoding UTF8 dist/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CopyProject-validation-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Export source and history
+        if: always()
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force source-export | Out-Null
+          git archive --format=zip --output=source-export/CopyProject-source.zip HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'source export failed' }
+          git bundle create source-export/CopyProject.bundle --all
+          if ($LASTEXITCODE -ne 0) { throw 'bundle export failed' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: CopyProject-source-${{ github.sha }}
+          path: source-export/
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: CopyProject-test-evidence-${{ github.sha }}
+          path: TestResults/
+          if-no-files-found: warn
+          retention-days: 30
