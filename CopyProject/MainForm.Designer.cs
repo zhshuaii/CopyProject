@@ -1,16 +1,9 @@
-﻿namespace CopyProject
+namespace CopyProject
 {
     partial class MainForm
     {
-        /// <summary>
-        /// 必需的设计器变量。
-        /// </summary>
         private System.ComponentModel.IContainer components = null;
 
-        /// <summary>
-        /// 清理所有正在使用的资源。
-        /// </summary>
-        /// <param name="disposing">如果应释放托管资源，为 true；否则为 false。</param>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -20,12 +13,8 @@
             base.Dispose(disposing);
         }
 
-        #region Windows 窗体设计器生成的代码
+        #region Windows Form Designer generated code
 
-        /// <summary>
-        /// 设计器支持所需的方法 - 不要修改
-        /// 使用代码编辑器修改此方法的内容。
-        /// </summary>
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
@@ -38,6 +27,14 @@
             this.label2 = new System.Windows.Forms.Label();
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
             this.labelProgress = new System.Windows.Forms.Label();
+            this.BtnCancel = new System.Windows.Forms.Button();
+            this.BtnCancel.Location = new System.Drawing.Point(470, 65);
+            this.BtnCancel.Size = new System.Drawing.Size(100, 25);
+            this.BtnCancel.Text = "取消备份";
+            this.BtnCancel.Enabled = false;
+            this.BtnCancel.TabIndex = 16;
+            this.BtnCancel.Click += new System.EventHandler(this.BtnCancel_Click);
+            this.Controls.Add(this.BtnCancel);
             this.SuspendLayout();
             // 
             // txtSourcePath
@@ -66,7 +63,7 @@
             this.BtnCopyProject.Name = "BtnCopyProject";
             this.BtnCopyProject.Size = new System.Drawing.Size(100, 25);
             this.BtnCopyProject.TabIndex = 9;
-            this.BtnCopyProject.Text = "复制项目";
+            this.BtnCopyProject.Text = "备份项目";
             this.BtnCopyProject.UseVisualStyleBackColor = true;
             this.BtnCopyProject.Click += new System.EventHandler(this.BtnCopyProject_Click);
             // 
@@ -78,7 +75,7 @@
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(142, 15);
             this.label1.TabIndex = 10;
-            this.label1.Text = "选择要复制的源项目";
+            this.label1.Text = "选择要备份的源项目";
             // 
             // txtVersion
             // 
@@ -87,7 +84,7 @@
             this.txtVersion.Name = "txtVersion";
             this.txtVersion.Size = new System.Drawing.Size(134, 15);
             this.txtVersion.TabIndex = 11;
-            this.txtVersion.Text = "Version：1.0.0.0";
+            this.txtVersion.Text = "";
             // 
             // txtAuthor
             // 
@@ -105,7 +102,7 @@
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(400, 50);
             this.label2.TabIndex = 13;
-            this.label2.Text = "Copy Project 可以尝试复制正在运行中的WinCC项目\r\n但不包括历史归档报警等！";
+            this.label2.Text = "WinCC Runtime 无需停止即可备份项目\r\n不备份历史数据库；备份期间请勿编辑/切换工程";
             this.label2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // progressBar1
@@ -117,10 +114,10 @@
             // 
             // labelProgress
             // 
-            this.labelProgress.AutoSize = true;
-            this.labelProgress.Location = new System.Drawing.Point(218, 125);
+            this.labelProgress.AutoSize = false;
+            this.labelProgress.Location = new System.Drawing.Point(12, 153);
             this.labelProgress.Name = "labelProgress";
-            this.labelProgress.Size = new System.Drawing.Size(76, 15);
+            this.labelProgress.Size = new System.Drawing.Size(558, 40);
             this.labelProgress.TabIndex = 15;
             this.labelProgress.Text = "准备中...";
             // 
@@ -128,7 +125,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(120F, 120F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
-            this.ClientSize = new System.Drawing.Size(582, 153);
+            this.ClientSize = new System.Drawing.Size(582, 205);
             this.Controls.Add(this.labelProgress);
             this.Controls.Add(this.progressBar1);
             this.Controls.Add(this.label2);
@@ -146,11 +143,11 @@
             this.Text = "Copy Project";
             this.ResumeLayout(false);
             this.PerformLayout();
-
         }
 
         #endregion
 
+        private System.Windows.Forms.Button BtnCancel;
         private System.Windows.Forms.TextBox txtSourcePath;
         private System.Windows.Forms.Button BtnSelectSource;
         private System.Windows.Forms.Button BtnCopyProject;
@@ -162,4 +159,3 @@
         private System.Windows.Forms.Label labelProgress;
     }
 }
-
