@@ -1,0 +1,42 @@
+name: Build and verify CopyProject
+
+on:
+  push:
+    branches: [master, 'fix/**']
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: microsoft/setup-msbuild@v2
+      - name: Export audited baselines
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force baseline | Out-Null
+          git bundle create baseline/CopyProject.bundle --all
+          if ($LASTEXITCODE -ne 0) { throw 'git bundle failed' }
+          git archive --format=zip --output=baseline/master.zip 072cd715c4b219a48de127bdb2806d798bd49c65
+          if ($LASTEXITCODE -ne 0) { throw 'master archive failed' }
+          git archive --format=zip --output=baseline/previous-implementation.zip bac1d4d8d759208963b4e6e5793f2718665fa173
+          if ($LASTEXITCODE -ne 0) { throw 'implementation archive failed' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CopyProject-audited-baselines
+          path: baseline/
+          retention-days: 7
+      - name: Build Release
+        shell: pwsh
+        run: |
+          msbuild CopyProject.sln /m /t:Rebuild /p:Configuration=Release '/p:Platform=Any CPU' /v:minimal
+          if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
